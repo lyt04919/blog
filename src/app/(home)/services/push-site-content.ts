@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { fileToBase64NoPrefix } from '@/lib/file-utils'
 import type { SiteContent, CardStyles } from '../stores/config-store'
 import type { FileItem, ArtImageUploads, SocialButtonImageUploads, BackgroundImageUploads } from '../config-dialog/site-settings'
+import { useAuthStore } from '@/hooks/use-auth'
 
 type ArtImageConfig = SiteContent['artImages'][number]
 type BackgroundImageConfig = SiteContent['backgroundImages'][number]
@@ -20,6 +21,92 @@ export async function pushSiteContent(
 	removedBackgroundImages?: BackgroundImageConfig[],
 	socialButtonImageUploads?: SocialButtonImageUploads
 ): Promise<void> {
+	const authState = useAuthStore.getState()
+	const isLocalDev = process.env.NODE_ENV === 'development'
+
+	if (!authState.isAuth && isLocalDev) {
+		toast.info('检测到本地开发环境，正在保存到本地...')
+		
+		const files: { path: string; contentBase64: string }[] = []
+		const deletedFiles: string[] = []
+
+		if (faviconItem?.type === 'file') {
+			files.push({
+				path: 'public/favicon.png',
+				contentBase64: await fileToBase64NoPrefix(faviconItem.file)
+			})
+		}
+
+		if (avatarItem?.type === 'file') {
+			files.push({
+				path: 'public/images/avatar.png',
+				contentBase64: await fileToBase64NoPrefix(avatarItem.file)
+			})
+		}
+
+		if (artImageUploads) {
+			for (const [id, item] of Object.entries(artImageUploads)) {
+				if (item.type !== 'file') continue
+				const artConfig = siteContent.artImages?.find(art => art.id === id)
+				if (!artConfig) continue
+				const path = `public${artConfig.url.startsWith('/') ? artConfig.url : `/${artConfig.url}`}`
+				files.push({ path, contentBase64: await fileToBase64NoPrefix(item.file) })
+			}
+		}
+
+		if (removedArtImages) {
+			for (const art of removedArtImages) {
+				deletedFiles.push(`public${art.url.startsWith('/') ? art.url : `/${art.url}`}`)
+			}
+		}
+
+		if (backgroundImageUploads) {
+			for (const [id, item] of Object.entries(backgroundImageUploads)) {
+				if (item.type !== 'file') continue
+				const bgConfig = siteContent.backgroundImages?.find(bg => bg.id === id)
+				if (!bgConfig || !bgConfig.url.startsWith('/images/background/')) continue
+				const path = `public${bgConfig.url.startsWith('/') ? bgConfig.url : `/${bgConfig.url}`}`
+				files.push({ path, contentBase64: await fileToBase64NoPrefix(item.file) })
+			}
+		}
+
+		if (removedBackgroundImages) {
+			for (const bg of removedBackgroundImages) {
+				if (!bg.url.startsWith('/images/background/')) continue
+				deletedFiles.push(`public${bg.url.startsWith('/') ? bg.url : `/${bg.url}`}`)
+			}
+		}
+
+		if (socialButtonImageUploads) {
+			for (const [buttonId, item] of Object.entries(socialButtonImageUploads)) {
+				if (item.type !== 'file') continue
+				const button = siteContent.socialButtons?.find(btn => btn.id === buttonId)
+				if (!button || !button.value.startsWith('/images/social-buttons/')) continue
+				const path = `public${button.value.startsWith('/') ? button.value : `/${button.value}`}`
+				files.push({ path, contentBase64: await fileToBase64NoPrefix(item.file) })
+			}
+		}
+
+		const res = await fetch('/api/save-local', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				siteContent,
+				cardStyles,
+				files,
+				deletedFiles
+			})
+		})
+
+		if (!res.ok) {
+			const errorData = await res.json()
+			throw new Error(errorData.error || '本地保存失败')
+		}
+
+		toast.success('本地保存成功！')
+		return
+	}
+
 	const token = await getAuthToken()
 
 	toast.info('正在获取分支信息...')

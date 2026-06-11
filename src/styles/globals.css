@@ -14,15 +14,21 @@
 
 @layer base {
 	html {
-		@apply text-primary bg-bg h-full leading-tight;
+		@apply text-primary bg-bg min-h-full leading-tight;
 		scroll-behavior: smooth;
 	}
 
 	body {
-		@apply h-full bg-none;
+		@apply min-h-full bg-none;
 	}
 	* {
 		@apply border-border;
+	}
+
+	@media (min-width: 640px) {
+		.grid-cols-5-custom {
+			grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+		}
 	}
 
 	input:focus,
@@ -92,11 +98,14 @@
 }
 
 @utility card {
-	@apply bg-card absolute rounded-[40px] border p-6;
+	@apply bg-card rounded-[40px] border p-6;
+	border-color: rgba(255, 255, 255, 0.5);
 	box-shadow:
-		0 40px 50px -32px rgba(0, 0, 0, 0.05),
-		inset 0 0 20 rgba(255, 255, 255, 0.25);
-	backdrop-filter: blur(4px);
+		0 30px 60px -20px rgba(0, 0, 0, 0.08),
+		0 10px 20px -5px rgba(0, 0, 0, 0.04),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+		inset 0 4px 24px rgba(255, 255, 255, 0.4);
+	backdrop-filter: blur(16px);
 
 	&.squircle {
 		@supports (corner-shape: squircle) {
@@ -174,5 +183,131 @@
 .heartbeat-container:hover {
 	.heartbeat {
 		animation: heartbeat-frame 0.8s ease-in-out;
+	}
+}
+
+@keyframes marquee {
+	from { transform: translateX(0); }
+	to { transform: translateX(calc(-100% - var(--gap))); }
+}
+
+@keyframes marquee-reverse {
+	from { transform: translateX(calc(-100% - var(--gap))); }
+	to { transform: translateX(0); }
+}
+
+@keyframes marquee-vertical {
+	from { transform: translateY(0); }
+	to { transform: translateY(calc(-100% - var(--gap))); }
+}
+
+@keyframes marquee-vertical-reverse {
+	from { transform: translateY(calc(-100% - var(--gap))); }
+	to { transform: translateY(0); }
+}
+
+.animate-marquee {
+	animation: marquee var(--duration) linear infinite;
+}
+
+.animate-marquee-vertical {
+	animation: marquee-vertical var(--duration) linear infinite;
+}
+
+/* 3D Book Layout */
+.book-perspective {
+	perspective: 1000px;
+}
+
+.transform-three-d {
+	transform-style: preserve-3d;
+	transform-origin: center;
+}
+
+.book-3d {
+	position: relative;
+	transition: transform 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+	transform-style: preserve-3d;
+	transform-origin: center;
+}
+
+	.ambient-shadow-book, .ambient-shadow-movie {
+		transition: transform 0.5s ease-in-out, opacity 0.7s ease-in-out;
+		transform-origin: center;
+	}
+
+	.carousel-item-w { width: 160px; }
+	@media (min-width: 640px) { .carousel-item-w { width: calc(33.333% - 16px); } }
+	@media (min-width: 1024px) { .carousel-item-w { width: calc(25% - 18px); } }
+	@media (min-width: 1280px) { .carousel-item-w { width: calc(20% - 19.2px); } }
+
+	@media (min-width: 1024px) {
+	.group:hover .book-3d {
+		transform: rotateX(80deg) rotate(45deg) scale(0.75);
+	}
+	.group:hover .ambient-shadow-book {
+		transform: rotateX(80deg) rotate(45deg) scale(0.75) translateZ(-10px);
+	}
+
+	/* Right edge pages (thickness) */
+	.book-3d::before {
+		content: "";
+		display: block;
+		position: absolute;
+		right: 0;
+		top: 1px;
+		bottom: 1px;
+		width: var(--book-height, 28px);
+		background-color: #ffffff;
+		background-image: linear-gradient(90deg, #ffffff 40%, #f6f6f6 0, #f6f6f6 50%, #ffffff 0, #ffffff 90%, #f6f6f6 0, #f6f6f6);
+		background-size: 3px 3px;
+		border-left: 1px solid #e2e8f0;
+		border-right: 1px solid #e2e8f0;
+		border-top: 1px solid #cbd5e1;
+		border-bottom: 1px solid #e2e8f0;
+		transform: translateY(0) translateX(0) translateZ(0) rotateY(-90deg);
+		transform-origin: right center;
+		z-index: -1;
+	}
+
+	/* Bottom edge pages (thickness) - Fixed translation direction and thickness */
+	.book-3d::after {
+		content: "";
+		display: block;
+		position: absolute;
+		left: 1px;
+		right: 1px;
+		top: 100%;
+		height: var(--book-height, 28px);
+		background-color: #f3f4f6;
+		background-image: linear-gradient(0deg, #f6f6f6 40%, #eaeaed 0, #eaeaed 50%, #f6f6f6 0, #f6f6f6 90%, #eaeaed 0, #eaeaed);
+		background-size: 4px 4px;
+		border-top: 1px solid #e2e8f0;
+		border-bottom: 1px solid #e2e8f0;
+		border-left: 4px solid #cbd5e1;
+		border-right: 1px solid #e2e8f0;
+		border-bottom-left-radius: 2px;
+		transform: translateY(0) translateX(0) translateZ(0) rotateX(-90deg);
+		transform-origin: top center;
+		z-index: -2;
+	}
+}
+
+/* 3D Movie Poster Layout */
+.poster-perspective {
+	perspective: 1000px;
+}
+
+.poster-3d {
+	position: relative;
+	transition: transform 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+	transform-style: preserve-3d;
+	transform-origin: center;
+}
+
+@media (min-width: 1024px) {
+	.group:hover .poster-3d {
+		transform: rotateX(20deg) rotateY(-25deg) rotateZ(2deg) scale(0.8);
+		box-shadow: -15px 20px 30px rgba(0, 0, 0, 0.4);
 	}
 }

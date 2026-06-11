@@ -20,6 +20,12 @@ type WriteStore = {
 	originalSlug: string | null
 	setMode: (mode: 'create' | 'edit', originalSlug?: string) => void
 
+	// Layout state
+	isZenMode: boolean
+	isSplitMode: boolean
+	toggleZenMode: () => void
+	toggleSplitMode: () => void
+
 	// Form state
 	form: PublishForm
 	updateForm: (updates: Partial<PublishForm>) => void
@@ -39,6 +45,10 @@ type WriteStore = {
 	loading: boolean
 	setLoading: (loading: boolean) => void
 
+	// Auto-Save state
+	autoSaveStatus: 'idle' | 'saving' | 'saved' | 'error'
+	setAutoSaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void
+
 	// Load blog for editing
 	loadBlogForEdit: (slug: string) => Promise<void>
 
@@ -54,7 +64,8 @@ const initialForm: PublishForm = {
 	date: formatDateTimeLocal(),
 	summary: '',
 	hidden: false,
-	category: ''
+	category: '',
+	status: 'draft'
 }
 
 export const useWriteStore = create<WriteStore>((set, get) => ({
@@ -62,6 +73,12 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 	mode: 'create',
 	originalSlug: null,
 	setMode: (mode, originalSlug) => set({ mode, originalSlug: originalSlug || null }),
+
+	// Layout state
+	isZenMode: false,
+	isSplitMode: false,
+	toggleZenMode: () => set(state => ({ isZenMode: !state.isZenMode, isSplitMode: !state.isZenMode ? false : state.isSplitMode })),
+	toggleSplitMode: () => set(state => ({ isSplitMode: !state.isSplitMode, isZenMode: !state.isSplitMode ? false : state.isZenMode })),
 
 	// Form state
 	form: { ...initialForm },
@@ -154,10 +171,28 @@ export const useWriteStore = create<WriteStore>((set, get) => ({
 	loading: false,
 	setLoading: loading => set({ loading }),
 
+	// Auto-Save state
+	autoSaveStatus: 'idle',
+	setAutoSaveStatus: autoSaveStatus => set({ autoSaveStatus }),
+
 	// Load blog for editing
 	loadBlogForEdit: async (slug: string) => {
 		try {
 			set({ loading: true })
+
+			if (slug === 'new') {
+				const draftSlug = `draft-${Date.now()}`
+				set({
+					mode: 'create',
+					originalSlug: null,
+					form: { ...initialForm, slug: draftSlug },
+					images: [],
+					cover: null,
+					loading: false
+				})
+				return
+			}
+
 			const blog = await loadBlog(slug)
 
 			// Parse images from markdown

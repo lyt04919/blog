@@ -15,9 +15,10 @@ type BlogPreviewProps = {
 	summary?: string
 	cover?: string
 	slug?: string
+	hideSidebar?: boolean
 }
 
-export function BlogPreview({ markdown, title, tags, date, summary, cover, slug }: BlogPreviewProps) {
+export function BlogPreview({ markdown, title, tags, date, summary, cover, slug, hideSidebar }: BlogPreviewProps) {
 	const { maxSM: isMobile } = useSize()
 	const { content, toc, loading } = useMarkdownRender(markdown)
 	const { siteContent } = useConfigStore()
@@ -28,12 +29,13 @@ export function BlogPreview({ markdown, title, tags, date, summary, cover, slug 
 	}
 
 	return (
-		<div className='mx-auto flex max-w-[1140px] justify-center gap-6 px-6 pt-28 pb-12 max-sm:px-0'>
+		<div className={`mx-auto flex w-full justify-center gap-6 ${hideSidebar ? 'pt-0 pb-0 px-0' : 'max-w-[1140px] px-6 pb-12 pt-28'}`}>
 			<motion.article
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
 				transition={{ delay: INIT_DELAY }}
-				className='card bg-article static flex-1 overflow-auto rounded-xl p-8'>
+				style={hideSidebar ? { minHeight: 'calc(100vh - 284px)' } : undefined}
+				className={`card bg-article static flex-1 min-w-0 overflow-auto rounded-xl p-8 ${hideSidebar ? 'min-h-[536px]' : ''}`}>
 				<div>
 					<div className='text-center text-2xl font-semibold'>{title}</div>
 
@@ -51,7 +53,7 @@ export function BlogPreview({ markdown, title, tags, date, summary, cover, slug 
 				</div>
 			</motion.article>
 
-			{!isMobile && <BlogSidebar cover={cover} summary={summary} toc={toc} slug={slug} />}
+			{!isMobile && !hideSidebar && <BlogSidebar cover={cover} summary={summary} toc={toc} slug={slug} />}
 		</div>
 	)
 }

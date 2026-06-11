@@ -7,6 +7,7 @@ export type BlogIndexItem = {
 	cover?: string
 	hidden?: boolean
 	category?: string
+	status?: 'draft' | 'published'
 }
 
 export type BlogConfig = {

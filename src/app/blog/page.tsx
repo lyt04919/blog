@@ -23,6 +23,9 @@ import { Check } from 'lucide-react'
 import { BlogCoverHoverPreview, useBlogCoverHover } from './components/blog-cover-hover'
 import { CategoryModal } from './components/category-modal'
 
+import { BlogGridCard } from '@/components/blog-grid-card'
+import { TagFilter } from '@/components/tag-filter'
+
 type DisplayMode = 'day' | 'week' | 'month' | 'year' | 'category'
 
 export default function BlogPage() {
@@ -43,6 +46,9 @@ export default function BlogPage() {
 	const [categoryModalOpen, setCategoryModalOpen] = useState(false)
 	const [categoryList, setCategoryList] = useState<string[]>([])
 	const [newCategory, setNewCategory] = useState('')
+	const [viewLayout, setViewLayout] = useState<'timeline' | 'grid'>('grid')
+	const [selectedTag, setSelectedTag] = useState<string>('All')
+	const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all')
 
 	const { cancelCoverPreview, onCoverLinkMouseEnter, hoverCoverPreview, mousePosition } = useBlogCoverHover(editMode)
 
@@ -58,8 +64,41 @@ export default function BlogPage() {
 
 	const displayItems = editMode ? editableItems : items
 
+	const statusFilteredItems = useMemo(() => {
+		if (statusFilter === 'all') return displayItems
+		return displayItems.filter(item => {
+			const itemStatus = item.status || 'published'
+			return itemStatus === statusFilter
+		})
+	}, [displayItems, statusFilter])
+
+	const allTags = useMemo(() => {
+		const tags = new Set<string>()
+		statusFilteredItems.forEach(item => {
+			if (item.tags) item.tags.forEach(t => tags.add(t))
+		})
+		return ['All', ...Array.from(tags).sort()]
+	}, [statusFilteredItems])
+
+	const tagCounts = useMemo(() => {
+		const counts: Record<string, number> = { All: statusFilteredItems.length }
+		statusFilteredItems.forEach(item => {
+			if (item.tags) {
+				item.tags.forEach(tag => {
+					counts[tag] = (counts[tag] || 0) + 1
+				})
+			}
+		})
+		return counts
+	}, [statusFilteredItems])
+
+	const gridFilteredItems = useMemo(() => {
+		if (selectedTag === 'All') return statusFilteredItems
+		return statusFilteredItems.filter(item => item.tags?.includes(selectedTag))
+	}, [statusFilteredItems, selectedTag])
+
 	const { groupedItems, groupKeys, getGroupLabel } = useMemo(() => {
-		const sorted = [...displayItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+		const sorted = [...statusFilteredItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
 		const grouped = sorted.reduce(
 			(acc, item) => {
@@ -277,6 +316,56 @@ export default function BlogPage() {
 		}
 	}, [items, editableItems, categoryList, categoriesFromServer])
 
+	const handleSaveLocal = useCallback(async () => {
+		const removedSlugs = items.filter(item => !editableItems.some(editItem => editItem.slug === item.slug)).map(item => item.slug)
+		const normalizedCategoryList = categoryList.map(c => c.trim()).filter(Boolean)
+		const categoryListChanged = JSON.stringify(normalizedCategoryList) !== JSON.stringify((categoriesFromServer || []).map(c => c.trim()).filter(Boolean))
+		const categoryAssignmentChanged = items.some(origin => {
+			const next = editableItems.find(editItem => editItem.slug === origin.slug)
+			const originCategory = origin.category || ''
+			const nextCategory = next?.category || ''
+			return originCategory !== nextCategory
+		})
+		const hasChanges = removedSlugs.length > 0 || categoryListChanged || categoryAssignmentChanged
+
+		if (!hasChanges) {
+			toast.info('没有需要保存的改动')
+			return
+		}
+
+		try {
+			setSaving(true)
+
+			const sortedItems = [...editableItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+			const resIndex = await fetch('/api/save-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'blog-index', data: sortedItems }) })
+			const indexData = await resIndex.json()
+			if (!indexData.success) throw new Error(indexData.error)
+
+			const resCategories = await fetch('/api/save-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'blog-categories', data: { categories: normalizedCategoryList } }) })
+			const categoriesData = await resCategories.json()
+			if (!categoriesData.success) throw new Error(categoriesData.error)
+
+			if (removedSlugs.length > 0) {
+				const deletedFiles = removedSlugs.map(slug => `public/blogs/${slug}`)
+				const resDel = await fetch('/api/save-local', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deletedFiles }) })
+				if (!resDel.ok) {
+					const err = await resDel.json()
+					throw new Error(err.error || 'Failed to delete local files')
+				}
+			}
+
+			setEditMode(false)
+			setSelectedSlugs(new Set())
+			setCategoryModalOpen(false)
+			toast.success('本地保存成功！')
+		} catch (error: any) {
+			console.error(error)
+			toast.error(error?.message || '保存失败')
+		} finally {
+			setSaving(false)
+		}
+	}, [items, editableItems, categoryList, categoriesFromServer])
+
 	const handleSaveClick = useCallback(() => {
 		if (!isAuth) {
 			keyInputRef.current?.click()
@@ -327,9 +416,96 @@ export default function BlogPage() {
 				}}
 			/>
 
-			<div className='flex flex-col items-center justify-center gap-6 px-6 pt-24 max-sm:pt-24'>
-				{items.length > 0 && (
-					<motion.div
+			<div className='min-h-screen relative pb-32'>
+				<div className='mx-auto w-full max-w-7xl px-6 pt-32 pb-8 md:pb-12'>
+					<div className='flex flex-col md:flex-row md:items-end justify-between gap-6'>
+						<div>
+							<h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 font-serif text-neutral-900'>
+								Blog
+							</h1>
+							<p className='text-neutral-500 text-lg max-w-lg'>
+								My thoughts, technical explorations, and materials of creation.
+							</p>
+						</div>
+
+						{/* Layout Controls */}
+						{!editMode && (
+							<div className='flex items-center gap-4'>
+								<div className="flex items-center gap-1 bg-neutral-100/50 p-1 rounded-xl">
+									<button
+										onClick={() => setStatusFilter('all')}
+										className={cn('px-3 py-1.5 text-sm rounded-lg transition-colors', statusFilter === 'all' ? 'bg-white shadow-sm font-medium text-neutral-900' : 'text-neutral-500 hover:text-neutral-700')}
+									>
+										全部
+									</button>
+									<button
+										onClick={() => setStatusFilter('published')}
+										className={cn('px-3 py-1.5 text-sm rounded-lg transition-colors', statusFilter === 'published' ? 'bg-white shadow-sm font-medium text-neutral-900' : 'text-neutral-500 hover:text-neutral-700')}
+									>
+										已发布
+									</button>
+									<button
+										onClick={() => setStatusFilter('draft')}
+										className={cn('px-3 py-1.5 text-sm rounded-lg transition-colors', statusFilter === 'draft' ? 'bg-white shadow-sm font-medium text-neutral-900' : 'text-neutral-500 hover:text-neutral-700')}
+									>
+										草稿箱
+									</button>
+								</div>
+								
+								<div className='flex items-center gap-2'>
+								<button 
+									onClick={() => setViewLayout('grid')}
+									className={cn(
+										'p-2.5 rounded-xl transition-all',
+										viewLayout === 'grid' ? 'bg-neutral-900 text-white shadow-md' : 'bg-white text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 border border-neutral-200'
+									)}
+								>
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+								</button>
+								<button 
+									onClick={() => setViewLayout('timeline')}
+									className={cn(
+										'p-2.5 rounded-xl transition-all',
+										viewLayout === 'timeline' ? 'bg-neutral-900 text-white shadow-md' : 'bg-white text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 border border-neutral-200'
+									)}
+								>
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+								</button>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+
+				<div className='mx-auto w-full max-w-7xl px-6'>
+					{viewLayout === 'grid' ? (
+						<div className="flex flex-col gap-8">
+							{allTags.length > 0 && (
+								<div>
+									<TagFilter tags={allTags} selectedTag={selectedTag} tagCounts={tagCounts} onSelectTag={setSelectedTag} />
+								</div>
+							)}
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative">
+								{gridFilteredItems.map((blog, index) => (
+									<BlogGridCard
+										key={blog.slug}
+										slug={blog.slug}
+										title={blog.title || blog.slug}
+										date={dayjs(blog.date).format('MMMM DD, YYYY')}
+										cover={blog.cover}
+										showRightBorder={true}
+										editMode={editMode}
+										isSelected={selectedSlugs.has(blog.slug)}
+										onClick={(e) => handleItemClick(e, blog.slug)}
+										status={blog.status as any}
+									/>
+								))}
+							</div>
+						</div>
+					) : (
+						<div className='flex flex-col items-center justify-center gap-6 pt-4'>
+					{items.length > 0 && (
+						<motion.div
 						initial={{ opacity: 0, scale: 0.6 }}
 						animate={{ opacity: 1, scale: 1 }}
 						className='card btn-rounded relative mx-auto flex items-center gap-1 p-1 max-sm:hidden'>
@@ -347,7 +523,7 @@ export default function BlogPage() {
 								onClick={() => setDisplayMode(option.value as DisplayMode)}
 								className={cn(
 									'btn-rounded px-3 py-1.5 text-xs font-medium transition-all',
-									displayMode === option.value ? 'bg-brand text-white shadow-sm' : 'text-secondary hover:text-brand hover:bg-white/60'
+									displayMode === option.value ? 'bg-neutral-900 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
 								)}>
 								{option.label}
 							</motion.button>
@@ -369,9 +545,9 @@ export default function BlogPage() {
 							className='card relative w-full max-w-[840px] space-y-6'>
 							<div className='mb-3 flex items-center justify-between gap-3 text-base'>
 								<div className='flex items-center gap-3'>
-									<div className='font-medium'>{getGroupLabel(groupKey)}</div>
-									<div className='h-2 w-2 rounded-full bg-[#D9D9D9]'></div>
-									<div className='text-secondary text-sm'>{group.items.length} 篇文章</div>
+									<div className='font-bold text-neutral-900'>{getGroupLabel(groupKey)}</div>
+									<div className='h-2 w-2 rounded-full bg-neutral-200'></div>
+									<div className='text-neutral-500 text-sm'>{group.items.length} 篇文章</div>
 								</div>
 								{editMode &&
 									(() => {
@@ -384,8 +560,8 @@ export default function BlogPage() {
 												className={cn(
 													'rounded-lg border px-3 py-1 text-xs transition-colors',
 													groupAllSelected
-														? 'border-brand/40 bg-brand/10 text-brand hover:bg-brand/20'
-														: 'text-secondary hover:border-brand/40 hover:text-brand border-transparent bg-white/60 hover:bg-white/80'
+														? 'border-neutral-400 bg-neutral-100 text-neutral-900 hover:bg-neutral-200'
+														: 'text-neutral-500 hover:border-neutral-400 hover:text-neutral-900 border-transparent bg-white hover:bg-neutral-50'
 												)}>
 												{groupAllSelected ? '取消全选' : '全选该分组'}
 											</motion.button>
@@ -408,7 +584,7 @@ export default function BlogPage() {
 												editMode
 													? cn(
 															'rounded-lg border px-3',
-															isSelected ? 'border-brand/60 bg-brand/5' : 'hover:border-brand/40 border-transparent hover:bg-white/60'
+															isSelected ? 'border-neutral-600 bg-neutral-50' : 'hover:border-neutral-400 border-transparent hover:bg-neutral-50'
 														)
 													: 'cursor-pointer'
 											)}>
@@ -416,24 +592,25 @@ export default function BlogPage() {
 												<span
 													className={cn(
 														'flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold',
-														isSelected ? 'border-brand bg-brand text-white' : 'border-[#D9D9D9] text-transparent'
+														isSelected ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-[#D9D9D9] text-transparent'
 													)}>
 													<Check />
 												</span>
 											)}
-											<span className='text-secondary w-[44px] shrink-0 text-sm font-medium'>{dayjs(it.date).format('MM-DD')}</span>
+											<span className='text-neutral-500 w-[44px] shrink-0 text-sm font-medium'>{dayjs(it.date).format('MM-DD')}</span>
 
 											<div className='relative flex h-2 w-2 items-center justify-center'>
-												<div className='bg-secondary group-hover:bg-brand h-[5px] w-[5px] rounded-full transition-all group-hover:h-4'></div>
+												<div className='bg-neutral-300 group-hover:bg-neutral-900 h-1.5 w-1.5 rounded-full transition-all group-hover:scale-150'></div>
 												<ShortLineSVG className='absolute bottom-4' />
 											</div>
 											<div
 												className={cn(
-													'flex-1 truncate text-sm font-medium transition-all',
-													editMode ? null : 'group-hover:text-brand group-hover:translate-x-2'
+													'flex-1 truncate text-sm font-medium transition-all text-neutral-700 flex items-center gap-2',
+													editMode ? null : 'group-hover:text-neutral-900 group-hover:translate-x-2'
 												)}>
 												{it.title || it.slug}
 												{hasRead && <span className='text-secondary ml-2 text-xs'>[已阅读]</span>}
+												{it.status === 'draft' && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-bold tracking-wide">草稿</span>}
 											</div>
 											<div className='flex flex-wrap items-center gap-2 max-sm:hidden'>
 												{(it.tags || []).map(t => (
@@ -465,6 +642,9 @@ export default function BlogPage() {
 					</div>
 				)}
 			</div>
+					)}
+				</div>
+			</div>
 
 			<div className='pt-12'>
 				{!loading && items.length === 0 && <div className='text-secondary py-6 text-center text-sm'>暂无文章</div>}
@@ -474,7 +654,7 @@ export default function BlogPage() {
 			<motion.div
 				initial={{ opacity: 0, scale: 0.6 }}
 				animate={{ opacity: 1, scale: 1 }}
-				className='absolute top-4 right-6 flex items-center gap-3 max-sm:hidden'>
+				className='absolute right-6 flex items-center gap-3 max-sm:hidden z-40' style={{ top: '6rem' }}>
 				{editMode ? (
 					<>
 						{enableCategories && (
@@ -510,20 +690,33 @@ export default function BlogPage() {
 							className='rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600 transition-colors disabled:opacity-60'>
 							删除(已选:{selectedCount}篇)
 						</motion.button>
+						<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleSaveLocal} disabled={saving} className='rounded-xl border bg-white/60 px-6 py-2 text-sm'>
+							本地保存
+						</motion.button>
 						<motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleSaveClick} disabled={saving} className='brand-btn px-6'>
 							{saving ? '保存中...' : buttonText}
 						</motion.button>
 					</>
 				) : (
-					!hideEditButton && (
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={toggleEditMode}
-							className='bg-card rounded-xl border px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
-							编辑
-						</motion.button>
-					)
+					<>
+						<Link href="/write/new">
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className='brand-btn px-6 py-2 text-sm'>
+								写博客
+							</motion.button>
+						</Link>
+						{!hideEditButton && (
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								onClick={toggleEditMode}
+								className='bg-card rounded-xl border px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80'>
+								编辑
+							</motion.button>
+						)}
+					</>
 				)}
 			</motion.div>
 

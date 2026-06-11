@@ -132,15 +132,26 @@ export default function Page() {
 				}}
 			/>
 
-			<div className='flex flex-col items-center justify-center px-6 pt-32 pb-12'>
-				<div className='grid w-full max-w-[1200px] grid-cols-2 gap-6 max-md:grid-cols-1'>
-					{projects.map((project, index) => (
-						<ProjectCard key={project.url} project={project} isEditMode={isEditMode} onUpdate={handleUpdate} onDelete={() => handleDelete(project)} />
-					))}
+			<div className='min-h-screen relative pb-32'>
+				<div className='mx-auto w-full max-w-7xl px-6 pt-32 pb-16'>
+					<h1 className='text-4xl font-extrabold tracking-tight lg:text-5xl mb-4 font-serif text-neutral-900 uppercase'>
+						Projects
+					</h1>
+					<p className='text-neutral-500 text-lg'>
+						A collection of things I've built and experimented with.
+					</p>
+				</div>
+
+				<div className='mx-auto w-full max-w-7xl px-6 flex flex-col items-center justify-center pb-12'>
+					<div className='grid w-full grid-cols-2 gap-6 max-md:grid-cols-1'>
+						{projects.map((project, index) => (
+							<ProjectCard key={project.url} project={project} isEditMode={isEditMode} onUpdate={handleUpdate} onDelete={() => handleDelete(project)} />
+						))}
+					</div>
 				</div>
 			</div>
 
-			<motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} className='absolute top-4 right-6 flex gap-3 max-sm:hidden'>
+			<motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} className='absolute right-6 flex gap-3 max-sm:hidden z-40' style={{ top: '6rem' }}>
 				{isEditMode ? (
 					<>
 						<motion.button

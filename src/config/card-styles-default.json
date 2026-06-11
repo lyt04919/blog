@@ -19,7 +19,7 @@
 		"width": 232,
 		"height": 132,
 		"offset": 92,
-		"order": 4,
+		"order": 5,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -27,7 +27,7 @@
 	"calendarCard": {
 		"width": 350,
 		"height": 286,
-		"order": 5,
+		"order": 6,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -36,7 +36,7 @@
 		"width": 293,
 		"height": 66,
 		"offset": 120,
-		"order": 6,
+		"order": 11,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -44,7 +44,7 @@
 	"socialButtons": {
 		"width": 315,
 		"height": 48,
-		"order": 6,
+		"order": 10,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -60,7 +60,7 @@
 	"articleCard": {
 		"width": 266,
 		"height": 160,
-		"order": 8,
+		"order": 9,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -68,7 +68,7 @@
 	"writeButtons": {
 		"height": 42,
 		"width": 180,
-		"order": 8,
+		"order": 4,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": true
@@ -92,7 +92,7 @@
 	"hatCard": {
 		"width": 120,
 		"height": 120,
-		"order": 10,
+		"order": 12,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": false
@@ -100,7 +100,7 @@
 	"beianCard": {
 		"width": 200,
 		"height": 60,
-		"order": 11,
+		"order": 13,
 		"offsetX": null,
 		"offsetY": null,
 		"enabled": false

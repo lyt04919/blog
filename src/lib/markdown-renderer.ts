@@ -56,7 +56,8 @@ async function loadKatex() {
 	}
 }
 
-export async function renderMarkdown(markdown: string): Promise<MarkdownRenderResult> {
+export async function renderMarkdown(markdown: string = ''): Promise<MarkdownRenderResult> {
+	if (!markdown) markdown = ''
 	// Load optional renderers first so they apply on the FIRST lex/parse pass.
 	// (If we lex before registering extensions, math tokens won't ever be produced on a cold refresh.)
 	const codeBlockMap = new Map<string, { html: string; original: string }>()

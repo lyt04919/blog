@@ -78,9 +78,38 @@ export function CoverSection({ delay = 0 }: CoverSectionProps) {
 		e.target.value = ''
 	}
 
+	const handleRandomCover = () => {
+		const seed = Math.random().toString(36).slice(2, 10)
+		const imageUrl = `https://picsum.photos/seed/${seed}/1200/800`
+		setCover({
+			id: seed,
+			type: 'url',
+			url: imageUrl
+		})
+		toast.success('已随机生成封面')
+	}
+
 	return (
 		<motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay }} className='card relative'>
-			<h2 className='text-sm'>封面</h2>
+			<div className='flex items-center justify-between'>
+				<h2 className='text-sm'>封面</h2>
+				<div className='flex gap-3'>
+					<button
+						type='button'
+						onClick={handleRandomCover}
+						className='text-xs text-brand hover:underline transition-colors'>
+						随机封面
+					</button>
+					{cover && (
+						<button
+							type='button'
+							onClick={() => setCover(null)}
+							className='text-xs text-red-500 hover:underline transition-colors'>
+							清除
+						</button>
+					)}
+				</div>
+			</div>
 			<input ref={fileInputRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
 			<div
 				className='bg-card mt-3 h-[150px] overflow-hidden rounded-xl border'

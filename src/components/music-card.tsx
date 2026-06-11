@@ -40,12 +40,12 @@ export default function MusicCard() {
 			}
 		}
 
-		// Default position on home page
+		// Default position on home page: aligned with the left column under NavCard (General)
 		return {
-			x: styles.offsetX !== null ? center.x + styles.offsetX : center.x + CARD_SPACING + hiCardStyles.width / 2 - styles.offset,
-			y: styles.offsetY !== null ? center.y + styles.offsetY : center.y - clockCardStyles.offset + CARD_SPACING + calendarCardStyles.height + CARD_SPACING
+			x: styles.offsetX !== null ? center.x + styles.offsetX : center.x - hiCardStyles.width / 2 - cardStyles.navCard.width - CARD_SPACING + (cardStyles.navCard.width - styles.width),
+			y: styles.offsetY !== null ? center.y + styles.offsetY : (center.y - hiCardStyles.height / 2 - cardStyles.artCard.height - CARD_SPACING) + (cardStyles.navCard.height + 180) + CARD_SPACING
 		}
-	}, [isPlaying, isHomePage, center, styles, hiCardStyles, clockCardStyles, calendarCardStyles])
+	}, [isPlaying, isHomePage, center, styles, hiCardStyles, clockCardStyles, calendarCardStyles, cardStyles])
 
 	const { x, y } = position
 

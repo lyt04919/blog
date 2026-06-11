@@ -2,7 +2,8 @@
 import { PropsWithChildren } from 'react'
 import { useCenterInit } from '@/hooks/use-center'
 import BlurredBubblesBackground from './backgrounds/blurred-bubbles'
-import NavCard from '@/components/nav-card'
+import TopNav from '@/components/top-nav'
+import { useEffect, useMemo, useState } from 'react'
 import { Toaster } from 'sonner'
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon } from 'lucide-react'
 import { useSize, useSizeInit } from '@/hooks/use-size'
@@ -20,6 +21,21 @@ export default function Layout({ children }: PropsWithChildren) {
 	const currentBackgroundImageId = siteContent.currentBackgroundImageId
 	const currentBackgroundImage =
 		currentBackgroundImageId && currentBackgroundImageId.trim() ? backgroundImages.find(item => item.id === currentBackgroundImageId) : null
+
+	useEffect(() => {
+		const handler = (e: ErrorEvent) => {
+			fetch('/api/log-error', { method: 'POST', body: e.message + '\n' + e.error?.stack })
+		}
+		window.addEventListener('error', handler)
+		const rejectionHandler = (e: PromiseRejectionEvent) => {
+			fetch('/api/log-error', { method: 'POST', body: 'Unhandled Rejection: ' + e.reason })
+		}
+		window.addEventListener('unhandledrejection', rejectionHandler)
+		return () => {
+			window.removeEventListener('error', handler)
+			window.removeEventListener('unhandledrejection', rejectionHandler)
+		}
+	}, [])
 
 	return (
 		<>
@@ -50,16 +66,23 @@ export default function Layout({ children }: PropsWithChildren) {
 					}}
 				/>
 			)}
-			<BlurredBubblesBackground colors={siteContent.backgroundColors} regenerateKey={regenerateKey} />
+			<BlurredBubblesBackground 
+				colors={siteContent.backgroundColors} 
+				regenerateKey={regenerateKey} 
+				count={8} 
+				bottomBandStart={0} 
+				targetFps={24} 
+				speed={0.15} 
+			/>
 
-			<main className='relative z-10 h-full'>
+			<main className='relative z-10 min-h-full pt-8 pb-24'>
 				{children}
-				<NavCard />
+				<TopNav />
 
 				{!maxSM && cardStyles.musicCard?.enabled !== false && <MusicCard />}
 			</main>
 
-			{maxSM && init && <ScrollTopButton className='bg-brand/20 fixed right-6 bottom-8 z-50 shadow-md' />}
+			{maxSM && init && <ScrollTopButton className='bg-brand/20 fixed right-6 bottom-24 z-50 shadow-md' />}
 		</>
 	)
 }

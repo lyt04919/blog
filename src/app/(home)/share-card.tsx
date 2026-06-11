@@ -5,7 +5,7 @@ import Card from '@/components/card'
 import { useCenterStore } from '@/hooks/use-center'
 import { useConfigStore } from './stores/config-store'
 import { CARD_SPACING } from '@/consts'
-import shareList from '@/app/share/list.json'
+import shareList from '@/app/favorite/share/list.json'
 import Link from 'next/link'
 import { HomeDraggableLayer } from './home-draggable-layer'
 
@@ -35,8 +35,24 @@ export default function ShareCard() {
 		return null
 	}
 
-	const x = styles.offsetX !== null ? center.x + styles.offsetX : center.x + hiCardStyles.width / 2 - socialButtonsStyles.width
-	const y = styles.offsetY !== null ? center.y + styles.offsetY : center.y + hiCardStyles.height / 2 + CARD_SPACING + socialButtonsStyles.height + CARD_SPACING
+	// Below calendarCard in the right column, centered horizontally with the LikeButton pair
+	const x =
+		styles.offsetX !== null
+			? center.x + styles.offsetX
+			: center.x +
+				CARD_SPACING +
+				hiCardStyles.width / 2 +
+				(cardStyles.calendarCard.width - (styles.width + cardStyles.likePosition.width + CARD_SPACING)) / 2
+	const y =
+		styles.offsetY !== null
+			? center.y + styles.offsetY
+			: (center.y - hiCardStyles.height / 2 - cardStyles.artCard.height - CARD_SPACING) +
+				cardStyles.writeButtons.height +
+				CARD_SPACING +
+				cardStyles.clockCard.height +
+				CARD_SPACING +
+				cardStyles.calendarCard.height +
+				CARD_SPACING
 
 	return (
 		<HomeDraggableLayer cardKey='shareCard' x={x} y={y} width={styles.width} height={styles.height}>

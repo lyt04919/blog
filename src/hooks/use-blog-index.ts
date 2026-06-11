@@ -1,4 +1,5 @@
 import useSWR from 'swr'
+import { useMemo } from 'react'
 import { useAuthStore } from '@/hooks/use-auth'
 import type { BlogIndexItem } from '@/app/blog/types'
 
@@ -24,12 +25,16 @@ export function useBlogIndex() {
 	})
 
 	let result = data || []
-	if (!isAuth) {
-		result = result.filter(item => !item.hidden)
-	}
+	
+	const filteredResult = useMemo(() => {
+		if (!isAuth) {
+			return result.filter(item => !item.hidden)
+		}
+		return result
+	}, [result, isAuth])
 
 	return {
-		items: result,
+		items: filteredResult,
 		loading: isLoading,
 		error
 	}

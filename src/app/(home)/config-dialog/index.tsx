@@ -91,7 +91,8 @@ export default function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 	}
 
 	const handleSaveClick = () => {
-		if (!isAuth) {
+		const isLocalDev = process.env.NODE_ENV === 'development'
+		if (!isAuth && !isLocalDev) {
 			keyInputRef.current?.click()
 		} else {
 			handleSave()
@@ -219,7 +220,7 @@ export default function ConfigDialog({ open, onClose }: ConfigDialogProps) {
 		onClose()
 	}
 
-	const buttonText = isAuth ? '保存' : '导入密钥'
+	const buttonText = (isAuth || process.env.NODE_ENV === 'development') ? '保存' : '导入密钥'
 
 	const tabs: { id: TabType; label: string }[] = [
 		{ id: 'site', label: '网站设置' },

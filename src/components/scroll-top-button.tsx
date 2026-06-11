@@ -26,12 +26,12 @@ export function ScrollTopButton({ className, delay }: ScrollTopButtonProps) {
 		return () => window.removeEventListener('scroll', handleScroll)
 	}, [])
 
-	if (!show || !active) return null
-
 	const handleClick = useCallback(() => {
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 		setTimeout(() => setActive(false), 1000)
 	}, [])
+
+	if (!show || !active) return null
 
 	return (
 		<motion.button

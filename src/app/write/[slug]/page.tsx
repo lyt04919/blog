@@ -16,6 +16,8 @@ export default function EditBlogPage() {
 	const { form, cover } = useWriteStore()
 	const { isPreview, closePreview } = usePreviewStore()
 	const { loading } = useLoadBlog(slug)
+	
+	const { isZenMode, isSplitMode } = useWriteStore()
 
 	const coverPreviewUrl = cover ? (cover.type === 'url' ? cover.url : cover.previewUrl) : null
 
@@ -27,16 +29,27 @@ export default function EditBlogPage() {
 		return <div className='flex h-screen items-center justify-center text-sm text-red-500'>无效的博客 ID</div>
 	}
 
-	return isPreview ? (
-		<WritePreview form={form} coverPreviewUrl={coverPreviewUrl} onClose={closePreview} slug={slug} />
-	) : (
-		<>
-			<div className='flex h-full justify-center gap-6 px-6 pt-24 pb-12'>
-				<WriteEditor />
-				<WriteSidebar />
-			</div>
+	if (isPreview) {
+		return <WritePreview form={form} coverPreviewUrl={coverPreviewUrl} onClose={closePreview} slug={slug} />
+	}
 
-			<WriteActions />
-		</>
+	return (
+		<div className={`flex h-full flex-col items-center gap-6 px-6 pt-24 pb-12 ${isSplitMode ? 'w-full max-w-none' : ''}`}>
+			<div className={`w-full ${isSplitMode ? 'max-w-[1800px]' : 'max-w-[1144px]'}`}>
+				<WriteActions />
+			</div>
+			<div className={`flex w-full justify-center gap-6 ${isSplitMode ? 'max-w-[1800px]' : 'max-w-[1144px]'}`}>
+				<WriteEditor />
+				{!isZenMode && !isSplitMode && <WriteSidebar />}
+				{isSplitMode && (
+					<div 
+						style={{ height: 'calc(100vh - 220px)', minHeight: '600px' }}
+						className="flex-1 min-w-0 overflow-hidden"
+					>
+						<WritePreview form={form} coverPreviewUrl={coverPreviewUrl} onClose={closePreview} slug={slug} isSplit={true} />
+					</div>
+				)}
+			</div>
+		</div>
 	)
 }

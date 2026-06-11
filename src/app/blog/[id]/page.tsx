@@ -8,6 +8,7 @@ import { BlogPreview } from '@/components/blog-preview'
 import { loadBlog, type BlogConfig } from '@/lib/load-blog'
 import { useReadArticles } from '@/hooks/use-read-articles'
 import LiquidGrass from '@/components/liquid-grass'
+import { ArrowLeft } from 'lucide-react'
 
 export default function Page() {
 	const params = useParams() as { id?: string | string[] }
@@ -52,6 +53,14 @@ export default function Page() {
 		router.push(`/write/${slug}`)
 	}
 
+	const handleBack = () => {
+		if (window.history.length > 1) {
+			router.back()
+		} else {
+			router.push('/blog')
+		}
+	}
+
 	if (!slug) {
 		return <div className='text-secondary flex h-full items-center justify-center text-sm'>无效的链接</div>
 	}
@@ -70,6 +79,18 @@ export default function Page() {
 
 	return (
 		<>
+			<motion.button
+				initial={{ opacity: 0, scale: 0.6 }}
+				animate={{ opacity: 1, scale: 1 }}
+				whileHover={{ scale: 1.05 }}
+				whileTap={{ scale: 0.95 }}
+				onClick={handleBack}
+				className='absolute left-6 rounded-xl border bg-white/60 px-4 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80 flex items-center gap-1.5 z-40 max-sm:left-4'
+				style={{ top: '6rem' }}>
+				<ArrowLeft className='h-4 w-4' />
+				返回
+			</motion.button>
+
 			<BlogPreview
 				markdown={blog.markdown}
 				title={title}
@@ -86,7 +107,7 @@ export default function Page() {
 				whileHover={{ scale: 1.05 }}
 				whileTap={{ scale: 0.95 }}
 				onClick={handleEdit}
-				className='absolute top-4 right-6 rounded-xl border bg-white/60 px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80 max-sm:hidden'>
+				className='absolute right-6 rounded-xl border bg-white/60 px-6 py-2 text-sm backdrop-blur-sm transition-colors hover:bg-white/80 max-sm:hidden z-40' style={{ top: '6rem' }}>
 				编辑
 			</motion.button>
 

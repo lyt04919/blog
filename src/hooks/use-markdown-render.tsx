@@ -21,7 +21,7 @@ export function useMarkdownRender(markdown: string): MarkdownRenderResult {
 		async function render() {
 			setLoading(true)
 			try {
-				const { html, toc } = await renderMarkdown(markdown)
+				const { html, toc } = await renderMarkdown(markdown || '')
 				if (!cancelled) {
 					// Extract pre elements and replace with placeholders before parsing
 					const codeBlocks: Array<{ placeholder: string; code: string; preHtml: string }> = []

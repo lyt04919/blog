@@ -1,6 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
+import { useMemo } from 'react'
 
 export type CategoriesConfig = {
 	categories: string[]
@@ -27,8 +28,10 @@ export function useCategories() {
 		revalidateOnReconnect: true
 	})
 
+	const categories = useMemo(() => data?.categories ?? [], [data])
+
 	return {
-		categories: data?.categories ?? [],
+		categories,
 		loading: isLoading,
 		error
 	}
